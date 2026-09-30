@@ -70,6 +70,13 @@ app.use("/sendRegistration", registrationRouter);
 app.use("/login", login);
 app.use("/restfull", restfull);
 
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Backend is running",
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Listening on http://localhost:${PORT}`);
 });
