@@ -5,6 +5,7 @@ import cors from "cors";
 import session from "express-session";
 import connectSqlite3 from "connect-sqlite3";
 import dotenv from "dotenv";
+import fs from "fs";
 
 import { initDatabase } from "./database.js";
 
@@ -25,7 +26,17 @@ const SQLiteStore = connectSqlite3(session);
 
 const PORT = process.env.PORT || 3000;
 
-const dataDir = path.join(__dirname, "data");
+// --------------------------------------------------
+// Persistent data directory
+// --------------------------------------------------
+
+const dataDir = "/home/u800937993/domains/api.gli-ms.de/data";
+
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+console.log("Persistent data directory:", dataDir);
 
 // --------------------------------------------------
 // CORS
@@ -88,13 +99,9 @@ app.set("trust proxy", 1);
 // --------------------------------------------------
 
 app.use("/photo", sendEmailWithPhoto);
-
 app.use("/sendMessage", sendEmailContactForm);
-
 app.use("/sendRegistration", registrationRouter);
-
 app.use("/login", login);
-
 app.use("/restfull", restfull);
 
 // --------------------------------------------------
@@ -114,18 +121,13 @@ app.get("/health", (req, res) => {
 
 async function startServer() {
   try {
-    console.log("Initializing database...");
-
     await initDatabase();
-
-    console.log("Database initialized successfully.");
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
-
     process.exit(1);
   }
 }

@@ -3,23 +3,16 @@ import { open } from "sqlite";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const dataDir = "/home/u800937993/domains/api.gli-ms.de/data";
 
-// Database directory
-const dataDir = path.join(__dirname, "data");
-
-// Create data directory if it doesn't exist
+// إنشاء مجلد data إذا لم يكن موجودًا
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Database file
 const dbPath = path.join(dataDir, "registrations.db");
 
-console.log("Initializing database...");
 console.log("Database directory:", dataDir);
 console.log("Database path:", dbPath);
 
@@ -27,6 +20,11 @@ let db;
 
 export async function initDatabase() {
   try {
+    // منع فتح اتصال جديد إذا كانت قاعدة البيانات مهيأة بالفعل
+    if (db) {
+      return db;
+    }
+
     db = await open({
       filename: dbPath,
       driver: sqlite3.Database,
