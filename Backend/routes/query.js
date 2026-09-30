@@ -1,11 +1,12 @@
 import express from "express";
-import db from "../database.js";
+
+import { getDb } from "../database.js";
 
 const router = express.Router();
 
 /*
 |--------------------------------------------------------------------------
-| GET /api/registrations-query/sorted
+| GET /restfull/sorted
 |--------------------------------------------------------------------------
 | Get registrations with sorting
 |
@@ -21,17 +22,14 @@ const router = express.Router();
 
 router.get("/sorted", async (req, res) => {
   try {
+    const db = getDb();
+
     const { sort = "created_at", order = "desc" } = req.query;
 
     /*
     |--------------------------------------------------------------------------
     | Allowed sorting fields
     |--------------------------------------------------------------------------
-    | We use a whitelist here.
-    |
-    | This is important because column names cannot safely be passed
-    | to SQLite using ? placeholders.
-    |
     */
 
     const allowedSortFields = {
@@ -60,7 +58,7 @@ router.get("/sorted", async (req, res) => {
     |--------------------------------------------------------------------------
     */
 
-    const normalizedOrder = order.toLowerCase();
+    const normalizedOrder = String(order).toLowerCase();
 
     if (!["asc", "desc"].includes(normalizedOrder)) {
       return res.status(400).json({
@@ -77,13 +75,11 @@ router.get("/sorted", async (req, res) => {
     |--------------------------------------------------------------------------
     */
 
-    const registrations = await db.all(
-      `
+    const registrations = await db.all(`
       SELECT *
       FROM registrations
       ORDER BY ${sortColumn} ${normalizedOrder}
-      `,
-    );
+    `);
 
     return res.status(200).json({
       success: true,
@@ -104,7 +100,7 @@ router.get("/sorted", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| GET /api/registrations-query/search
+| GET /restfull/search
 |--------------------------------------------------------------------------
 | Search registrations by first name or last name
 |
@@ -118,6 +114,8 @@ router.get("/sorted", async (req, res) => {
 
 router.get("/search", async (req, res) => {
   try {
+    const db = getDb();
+
     const { q } = req.query;
 
     /*
@@ -126,14 +124,15 @@ router.get("/search", async (req, res) => {
     |--------------------------------------------------------------------------
     */
 
-    if (!q || !q.trim()) {
+    if (!q || !String(q).trim()) {
       return res.status(400).json({
         success: false,
         message: "Please provide a search query.",
       });
     }
 
-    const searchTerm = `%${q.trim()}%`;
+    const searchValue = String(q).trim();
+    const searchTerm = `%${searchValue}%`;
 
     /*
     |--------------------------------------------------------------------------
@@ -156,7 +155,7 @@ router.get("/search", async (req, res) => {
     return res.status(200).json({
       success: true,
       count: registrations.length,
-      search: q.trim(),
+      search: searchValue,
       data: registrations,
     });
   } catch (error) {
@@ -171,7 +170,7 @@ router.get("/search", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| GET /api/registrations-query/search/first-name
+| GET /restfull/search/first-name
 |--------------------------------------------------------------------------
 | Search only by first name
 |
@@ -184,16 +183,19 @@ router.get("/search", async (req, res) => {
 
 router.get("/search/first-name", async (req, res) => {
   try {
+    const db = getDb();
+
     const { q } = req.query;
 
-    if (!q || !q.trim()) {
+    if (!q || !String(q).trim()) {
       return res.status(400).json({
         success: false,
         message: "Please provide a first name to search.",
       });
     }
 
-    const searchTerm = `%${q.trim()}%`;
+    const searchValue = String(q).trim();
+    const searchTerm = `%${searchValue}%`;
 
     const registrations = await db.all(
       `
@@ -208,7 +210,7 @@ router.get("/search/first-name", async (req, res) => {
     return res.status(200).json({
       success: true,
       count: registrations.length,
-      search: q.trim(),
+      search: searchValue,
       field: "first_name",
       data: registrations,
     });
@@ -224,7 +226,7 @@ router.get("/search/first-name", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| GET /api/registrations-query/search/last-name
+| GET /restfull/search/last-name
 |--------------------------------------------------------------------------
 | Search only by last name
 |
@@ -237,16 +239,19 @@ router.get("/search/first-name", async (req, res) => {
 
 router.get("/search/last-name", async (req, res) => {
   try {
+    const db = getDb();
+
     const { q } = req.query;
 
-    if (!q || !q.trim()) {
+    if (!q || !String(q).trim()) {
       return res.status(400).json({
         success: false,
         message: "Please provide a last name to search.",
       });
     }
 
-    const searchTerm = `%${q.trim()}%`;
+    const searchValue = String(q).trim();
+    const searchTerm = `%${searchValue}%`;
 
     const registrations = await db.all(
       `
@@ -261,7 +266,7 @@ router.get("/search/last-name", async (req, res) => {
     return res.status(200).json({
       success: true,
       count: registrations.length,
-      search: q.trim(),
+      search: searchValue,
       field: "last_name",
       data: registrations,
     });

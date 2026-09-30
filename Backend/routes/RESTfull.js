@@ -1,9 +1,16 @@
 import express from "express";
-import db, { uuidv4 } from "../database.js";
+
+import { getDb, uuidv4 } from "../database.js";
 
 import "dotenv/config";
 
 const router = express.Router();
+
+/*
+|--------------------------------------------------------------------------
+| Authentication Middleware
+|--------------------------------------------------------------------------
+*/
 
 function requireLogin(req, res, next) {
   if (req.session?.user) {
@@ -20,14 +27,16 @@ router.use(requireLogin);
 
 /*
 |--------------------------------------------------------------------------
-| Delete dashboard/null-id
+| DELETE /restfull/null-id
 |--------------------------------------------------------------------------
-| delete exception case where id is null
-|
+| Delete exception case where id is NULL
+|--------------------------------------------------------------------------
 */
 
 router.delete("/null-id", async (req, res) => {
   try {
+    const db = getDb();
+
     const result = await db.run(`
       DELETE FROM registrations
       WHERE rowid = (
@@ -45,13 +54,14 @@ router.delete("/null-id", async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Registration deleted successfully",
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
+    console.error("Error deleting NULL-id registration:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Server error",
     });
@@ -60,17 +70,18 @@ router.delete("/null-id", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| Search /dashboard/search
+| GET /restfull/search
 |--------------------------------------------------------------------------
 | Search among registrations
-|
+|--------------------------------------------------------------------------
 */
 
 router.get("/search", async (req, res) => {
   try {
+    const db = getDb();
+
     const keyword = req.query.q?.trim();
 
-    // إذا لم توجد كلمة بحث
     if (!keyword) {
       return res.status(400).json({
         success: false,
@@ -117,6 +128,7 @@ router.get("/search", async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      count: registrations.length,
       data: registrations,
     });
   } catch (error) {
@@ -134,11 +146,13 @@ router.get("/search", async (req, res) => {
 | GET /restfull
 |--------------------------------------------------------------------------
 | Get all registrations
-|
+|--------------------------------------------------------------------------
 */
 
 router.get("/", async (req, res) => {
   try {
+    const db = getDb();
+
     const registrations = await db.all(`
       SELECT *
       FROM registrations
@@ -162,14 +176,16 @@ router.get("/", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| GET /api/registrations/:id
+| GET /restfull/:id
 |--------------------------------------------------------------------------
 | Get one registration by UUID
-|
+|--------------------------------------------------------------------------
 */
 
 router.get("/:id", async (req, res) => {
   try {
+    const db = getDb();
+
     const { id } = req.params;
 
     const registration = await db.get(
@@ -204,14 +220,16 @@ router.get("/:id", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| POST /api/registrations
+| POST /restfull
 |--------------------------------------------------------------------------
 | Create a new registration
-|
+|--------------------------------------------------------------------------
 */
 
 router.post("/", async (req, res) => {
   try {
+    const db = getDb();
+
     const {
       firstName,
       lastName,
@@ -222,11 +240,16 @@ router.post("/", async (req, res) => {
       courseType,
       preferredStartDate,
       addInfo,
-      status,
+      status = "bewerber",
       privacyPolicy,
     } = req.body;
 
-    // Validate required fields
+    /*
+    |--------------------------------------------------------------------------
+    | Validate required fields
+    |--------------------------------------------------------------------------
+    */
+
     if (
       !firstName ||
       !lastName ||
@@ -235,7 +258,6 @@ router.post("/", async (req, res) => {
       !gender ||
       !courseLevel ||
       !courseType ||
-      !status ||
       !preferredStartDate
     ) {
       return res.status(400).json({
@@ -244,7 +266,27 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Validate privacy policy
+    /*
+    |--------------------------------------------------------------------------
+    | Validate status
+    |--------------------------------------------------------------------------
+    */
+
+    const allowedStatuses = ["bewerber", "student", "archive"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid registration status.",
+      });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate privacy policy
+    |--------------------------------------------------------------------------
+    */
+
     if (privacyPolicy !== true) {
       return res.status(400).json({
         success: false,
@@ -252,10 +294,20 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Generate UUID
+    /*
+    |--------------------------------------------------------------------------
+    | Generate UUID
+    |--------------------------------------------------------------------------
+    */
+
     const id = uuidv4();
 
-    // Insert into database
+    /*
+    |--------------------------------------------------------------------------
+    | Insert registration
+    |--------------------------------------------------------------------------
+    */
+
     await db.run(
       `
       INSERT INTO registrations (
@@ -285,12 +337,17 @@ router.post("/", async (req, res) => {
         courseType,
         preferredStartDate,
         addInfo || null,
-        status || "bewerber",
+        status,
         privacyPolicy ? 1 : 0,
       ],
     );
 
-    // Get newly created registration
+    /*
+    |--------------------------------------------------------------------------
+    | Get newly created registration
+    |--------------------------------------------------------------------------
+    */
+
     const registration = await db.get(
       `
       SELECT *
@@ -316,11 +373,18 @@ router.post("/", async (req, res) => {
 });
 
 /*
-Adding without Privacy Policy
- */
+|--------------------------------------------------------------------------
+| POST /restfull/add
+|--------------------------------------------------------------------------
+| Add registration without requiring Privacy Policy
+| Used from the dashboard
+|--------------------------------------------------------------------------
+*/
 
 router.post("/add", async (req, res) => {
   try {
+    const db = getDb();
+
     const {
       firstName,
       lastName,
@@ -331,11 +395,16 @@ router.post("/add", async (req, res) => {
       courseType,
       preferredStartDate,
       addInfo,
-      status,
-      privacyPolicy,
+      status = "bewerber",
+      privacyPolicy = false,
     } = req.body;
 
-    // Validate required fields
+    /*
+    |--------------------------------------------------------------------------
+    | Validate required fields
+    |--------------------------------------------------------------------------
+    */
+
     if (
       !firstName ||
       !lastName ||
@@ -344,7 +413,6 @@ router.post("/add", async (req, res) => {
       !gender ||
       !courseLevel ||
       !courseType ||
-      !status ||
       !preferredStartDate
     ) {
       return res.status(400).json({
@@ -353,10 +421,35 @@ router.post("/add", async (req, res) => {
       });
     }
 
-    // Generate UUID
+    /*
+    |--------------------------------------------------------------------------
+    | Validate status
+    |--------------------------------------------------------------------------
+    */
+
+    const allowedStatuses = ["bewerber", "student", "archive"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid registration status.",
+      });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generate UUID
+    |--------------------------------------------------------------------------
+    */
+
     const id = uuidv4();
 
-    // Insert into database
+    /*
+    |--------------------------------------------------------------------------
+    | Insert registration
+    |--------------------------------------------------------------------------
+    */
+
     await db.run(
       `
       INSERT INTO registrations (
@@ -386,12 +479,17 @@ router.post("/add", async (req, res) => {
         courseType,
         preferredStartDate,
         addInfo || null,
-        status || "bewerber",
-        privacyPolicy,
+        status,
+        privacyPolicy ? 1 : 0,
       ],
     );
 
-    // Get newly created registration
+    /*
+    |--------------------------------------------------------------------------
+    | Get newly created registration
+    |--------------------------------------------------------------------------
+    */
+
     const registration = await db.get(
       `
       SELECT *
@@ -418,13 +516,16 @@ router.post("/add", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| PUT /api/registrations/:id
+| PUT /restfull/:id
 |--------------------------------------------------------------------------
 | Replace/update a complete registration
-|
+|--------------------------------------------------------------------------
 */
+
 router.put("/:id", async (req, res) => {
   try {
+    const db = getDb();
+
     const { id } = req.params;
 
     const {
@@ -440,7 +541,12 @@ router.put("/:id", async (req, res) => {
       status,
     } = req.body;
 
-    // *Check if registration exists*
+    /*
+    |--------------------------------------------------------------------------
+    | Check if registration exists
+    |--------------------------------------------------------------------------
+    */
+
     const existingRegistration = await db.get(
       `
       SELECT id
@@ -457,7 +563,12 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    // *Validate required fields*
+    /*
+    |--------------------------------------------------------------------------
+    | Validate required fields
+    |--------------------------------------------------------------------------
+    */
+
     if (
       !firstName ||
       !lastName ||
@@ -474,7 +585,12 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    // *Validate status*
+    /*
+    |--------------------------------------------------------------------------
+    | Validate status
+    |--------------------------------------------------------------------------
+    */
+
     const allowedStatuses = ["bewerber", "student", "archive"];
 
     if (!allowedStatuses.includes(status)) {
@@ -484,7 +600,12 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    // *Update registration*
+    /*
+    |--------------------------------------------------------------------------
+    | Update registration
+    |--------------------------------------------------------------------------
+    */
+
     await db.run(
       `
       UPDATE registrations
@@ -516,7 +637,12 @@ router.put("/:id", async (req, res) => {
       ],
     );
 
-    // *Get updated registration*
+    /*
+    |--------------------------------------------------------------------------
+    | Get updated registration
+    |--------------------------------------------------------------------------
+    */
+
     const registration = await db.get(
       `
       SELECT *
@@ -543,14 +669,16 @@ router.put("/:id", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| PATCH /api/registrations/:id
+| PATCH /restfull/:id
 |--------------------------------------------------------------------------
 | Update specific fields
-|
+|--------------------------------------------------------------------------
 */
 
 router.patch("/:id", async (req, res) => {
   try {
+    const db = getDb();
+
     const { id } = req.params;
 
     const allowedFields = {
@@ -563,11 +691,18 @@ router.patch("/:id", async (req, res) => {
       courseType: "course_type",
       preferredStartDate: "preferred_start_date",
       addInfo: "addInfo",
+      status: "status",
       privacyPolicy: "privacy_policy",
     };
 
     const updates = [];
     const values = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Build dynamic UPDATE
+    |--------------------------------------------------------------------------
+    */
 
     for (const [field, value] of Object.entries(req.body)) {
       if (allowedFields[field] !== undefined) {
@@ -588,7 +723,29 @@ router.patch("/:id", async (req, res) => {
       });
     }
 
-    // Check if registration exists
+    /*
+    |--------------------------------------------------------------------------
+    | Validate status if provided
+    |--------------------------------------------------------------------------
+    */
+
+    if (req.body.status !== undefined) {
+      const allowedStatuses = ["bewerber", "student", "archive"];
+
+      if (!allowedStatuses.includes(req.body.status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid registration status.",
+        });
+      }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Check if registration exists
+    |--------------------------------------------------------------------------
+    */
+
     const existingRegistration = await db.get(
       `
       SELECT id
@@ -616,6 +773,12 @@ router.patch("/:id", async (req, res) => {
       values,
     );
 
+    /*
+    |--------------------------------------------------------------------------
+    | Get updated registration
+    |--------------------------------------------------------------------------
+    */
+
     const registration = await db.get(
       `
       SELECT *
@@ -642,17 +805,24 @@ router.patch("/:id", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| DELETE /api/registrations/:id
+| DELETE /restfull/:id
 |--------------------------------------------------------------------------
 | Delete one registration
-|
+|--------------------------------------------------------------------------
 */
 
 router.delete("/:id", async (req, res) => {
   try {
+    const db = getDb();
+
     const { id } = req.params;
 
-    // Check if registration exists
+    /*
+    |--------------------------------------------------------------------------
+    | Check if registration exists
+    |--------------------------------------------------------------------------
+    */
+
     const existingRegistration = await db.get(
       `
       SELECT id
@@ -668,6 +838,12 @@ router.delete("/:id", async (req, res) => {
         message: "Registration not found.",
       });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Delete registration
+    |--------------------------------------------------------------------------
+    */
 
     await db.run(
       `

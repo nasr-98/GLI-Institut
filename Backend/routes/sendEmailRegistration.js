@@ -4,7 +4,7 @@ import ejs from "ejs";
 import path from "path";
 import "dotenv/config";
 
-import db, { uuidv4 } from "../database.js";
+import { getDb, uuidv4 } from "../database.js";
 
 const router = express.Router();
 
@@ -26,7 +26,13 @@ router.post("/", async (req, res) => {
     } = req.body;
 
     // ==========================================
-    // 1. Validate required fields
+    // 1. Get database connection
+    // ==========================================
+
+    const db = getDb();
+
+    // ==========================================
+    // 2. Validate required fields
     // ==========================================
 
     if (
@@ -41,47 +47,52 @@ router.post("/", async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
+        saved: false,
+        emailSent: false,
         message: "Please fill in all required fields.",
       });
     }
 
     // ==========================================
-    // 2. Validate Privacy Policy
+    // 3. Validate Privacy Policy
     // ==========================================
 
     if (privacyPolicy !== true) {
       return res.status(400).json({
         success: false,
+        saved: false,
+        emailSent: false,
         message: "Privacy Policy agreement is required.",
       });
     }
 
     // ==========================================
-    // 3. Generate UUID
+    // 4. Generate UUID
     // ==========================================
 
     const registrationId = uuidv4();
 
     // ==========================================
-    // 4. Save registration to SQLite
+    // 5. Save registration to SQLite
     // ==========================================
 
-    const result = await db.run(
+    await db.run(
       `
-      INSERT INTO registrations (
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        gender,
-        course_level,
-        course_type,
-        preferred_start_date,
-        addInfo,
-        privacy_policy
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO registrations (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          gender,
+          course_level,
+          course_type,
+          preferred_start_date,
+          addInfo,
+          status,
+          privacy_policy
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         registrationId,
@@ -94,108 +105,144 @@ router.post("/", async (req, res) => {
         courseType,
         preferredStartDate,
         addInfo || null,
+        "bewerber",
         privacyPolicy ? 1 : 0,
       ],
     );
 
-    // ==========================================
-    // 5. Registration saved successfully
-    // ==========================================
-
-    // console.log(`Registration saved. ID: ${registrationId}`);
+    console.log(`Registration saved successfully. ID: ${registrationId}`);
 
     // ==========================================
-    // 6. Send confirmation email
+    // 6. Get created_at from database
     // ==========================================
-
-    const html = await ejs.renderFile(
-      path.join(process.cwd(), "views", "registerFormEmail_toCostumer.ejs"),
-      {
-        firstName,
-        lastName,
-        registrationId,
-        courseLevel,
-        courseType,
-        preferredStartDate,
-        addInfo,
-      },
-    );
 
     const registration = await db.get(
-      "SELECT created_at FROM registrations WHERE id = ?",
+      `
+        SELECT created_at
+        FROM registrations
+        WHERE id = ?
+      `,
       registrationId,
     );
 
-    const created_at = registration.created_at;
+    const created_at = registration?.created_at || null;
 
-    const html2 = await ejs.renderFile(
-      path.join(process.cwd(), "views", "registerFormEmail_toUs.ejs"),
-      {
-        firstName,
-        lastName,
-        email,
-        phone,
-        registrationId,
-        courseLevel,
-        courseType,
-        created_at,
-        preferredStartDate,
-        addInfo,
-      },
+    // ==========================================
+    // 7. Render customer email
+    // ==========================================
+
+    const customerEmailPath = path.join(
+      process.cwd(),
+      "views",
+      "registerFormEmail_toCostumer.ejs",
     );
 
-    const { data, error } = await resend.emails.send({
+    const html = await ejs.renderFile(customerEmailPath, {
+      firstName,
+      lastName,
+      registrationId,
+      courseLevel,
+      courseType,
+      preferredStartDate,
+      addInfo,
+    });
+
+    // ==========================================
+    // 8. Render institute email
+    // ==========================================
+
+    const instituteEmailPath = path.join(
+      process.cwd(),
+      "views",
+      "registerFormEmail_toUs.ejs",
+    );
+
+    const html2 = await ejs.renderFile(instituteEmailPath, {
+      firstName,
+      lastName,
+      email,
+      phone,
+      registrationId,
+      courseLevel,
+      courseType,
+      created_at,
+      preferredStartDate,
+      addInfo,
+    });
+
+    // ==========================================
+    // 9. Send confirmation email to customer
+    // ==========================================
+
+    let customerEmailSent = false;
+    let instituteEmailSent = false;
+
+    const customerResult = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL,
       to: [email],
       subject: "Registration Confirmation - German Language Institute",
-
-      html: html,
+      html,
     });
 
-    const { data: DataToUs, error: ErrorToUs } = await resend.emails.send({
+    if (customerResult.error) {
+      console.error("Customer confirmation email error:", customerResult.error);
+    } else {
+      customerEmailSent = true;
+      console.log("Customer confirmation email sent successfully.");
+    }
+
+    // ==========================================
+    // 10. Send notification email to institute
+    // ==========================================
+
+    const instituteResult = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL,
       to: ["kontakt@gli-ms.de"],
       subject: "New Student Registration - German Language Institute",
-
       html: html2,
     });
 
+    if (instituteResult.error) {
+      console.error(
+        "Institute notification email error:",
+        instituteResult.error,
+      );
+    } else {
+      instituteEmailSent = true;
+      console.log("Institute notification email sent successfully.");
+    }
+
     // ==========================================
-    // 7. Handle Resend error
+    // 11. Registration was saved successfully
     // ==========================================
 
-    if (error) {
-      console.error("Email sending error:", error);
+    // Important:
+    // The registration is already stored in SQLite.
+    // Therefore, an email failure does NOT mean
+    // that the registration itself failed.
 
-      /*
-       * IMPORTANT:
-       *
-       * The registration is already saved
-       * in SQLite.
-       *
-       * Therefore we do NOT tell the user
-       * that the registration failed.
-       */
-
-      return res.status(200).json({
+    if (!customerEmailSent || !instituteEmailSent) {
+      return res.status(201).json({
         success: true,
         saved: true,
-        emailSent: false,
-        registrationId: registrationId,
+        emailSent: customerEmailSent,
+        instituteEmailSent,
+        registrationId,
         message:
-          "Registration saved successfully, but the confirmation email could not be sent.",
+          "Registration saved successfully, but one or more emails could not be sent.",
       });
     }
 
     // ==========================================
-    // 8. Everything succeeded
+    // 12. Everything succeeded
     // ==========================================
 
     return res.status(201).json({
       success: true,
       saved: true,
       emailSent: true,
-      registrationId: registrationId,
+      instituteEmailSent: true,
+      registrationId,
       message: "Registration submitted successfully.",
     });
   } catch (error) {
@@ -205,6 +252,7 @@ router.post("/", async (req, res) => {
       success: false,
       saved: false,
       emailSent: false,
+      instituteEmailSent: false,
       message: "An unexpected error occurred.",
     });
   }
