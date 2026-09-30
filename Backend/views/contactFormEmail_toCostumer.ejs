@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      background-color: #f4f7fb;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #333333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .header {
+      background-color: #1e3a8a;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      color: #ffffff;
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .content {
+      padding: 35px;
+      line-height: 1.6;
+    }
+
+    .content h2 {
+      color: #1e3a8a;
+      margin-top: 0;
+    }
+
+    .highlight {
+      background-color: #f5f8ff;
+      border-left: 4px solid #1e3a8a;
+      padding: 15px;
+      margin: 25px 0;
+      border-radius: 6px;
+    }
+
+    .footer {
+      padding: 20px;
+      text-align: center;
+      color: #777777;
+      font-size: 13px;
+      border-top: 1px solid #eeeeee;
+    }
+
+    .button {
+      display: inline-block;
+      background: #1e3a8a;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1>Thank You for Contacting Us</h1>
+    </div>
+
+    <div class="content">
+
+      <h2>Hello <%= name %>,</h2>
+
+      <p>
+        Thank you for reaching out to us through our contact form.
+        We are pleased to confirm that we have successfully received your message.
+      </p>
+
+      <div class="highlight">
+        <strong>Your message has been received and is currently being reviewed by our team.</strong>
+      </div>
+
+      <p>
+        We appreciate your interest and will get back to you as soon as possible.
+        If your inquiry requires additional information, one of our team members
+        will contact you using the email address you provided.
+      </p>
+
+      <p>
+       In the meantime, if you have any additional questions, please do not hesitate 
+       to contact us at kontakt@gli-ms.de. We will be happy to assist you.
+      </p>
+
+      <p>
+        We look forward to assisting you.
+      </p>
+
+      <p>
+        Best regards,<br>
+        <strong>German Language Institut Team</strong>
+      </p>
+
+    </div>
+
+    <div class="footer">
+      © <%= new Date().getFullYear() %> German Language Institute.<br>
+      This is an automatic confirmation email.
+    </div>
+
+  </div>
+</body>
+</html>

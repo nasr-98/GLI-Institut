@@ -1,0 +1,36 @@
+{
+  "name": "german-language-institute",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "email": "email dev --dir src/email",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.1",
+    "@mui/material": "^7.3.1",
+    "@react-email/components": "^1.0.12",
+    "axios": "^1.20.0",
+    "express": "^5.2.1",
+    "install": "0.13.0",
+    "npm": "11.20.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-email": "6.9.5",
+    "react-router-dom": "^7.8.2",
+    "resend": "^6.28.1",
+    "stylis": "^4.4.0",
+    "stylis-plugin-rtl": "^2.1.1"
+  },
+  "devDependencies": {
+    "@react-email/ui": "6.9.5",
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^7.1.3"
+  }
+}
