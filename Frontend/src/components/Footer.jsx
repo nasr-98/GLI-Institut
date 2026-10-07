@@ -60,7 +60,11 @@ export default function Footer({ lang }) {
               >
                 {t.nav.prices}
               </Button>
-              <Button to="/test" sx={{ justifyContent: "flex-start", px: 0 }}>
+              <Button
+                component={Link}
+                to="/testDeinDeutsch"
+                sx={{ justifyContent: "flex-start", px: 0 }}
+              >
                 {t.nav.test}
               </Button>
               <Button

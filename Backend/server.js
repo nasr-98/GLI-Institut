@@ -14,6 +14,7 @@ import sendEmailContactForm from "./routes/sendEmails_ContactForm.js";
 import registrationRouter from "./routes/sendEmailRegistration.js";
 import restfull from "./routes/RESTfull.js";
 import login from "./routes/login.js";
+import testDeinDeutschRouter from "./routes/testDeinDeutsch.js";
 
 dotenv.config();
 
@@ -98,7 +99,7 @@ app.set("trust proxy", 1);
 // Routes
 // --------------------------------------------------
 
-app.use("/photo", sendEmailWithPhoto);
+app.use("/test-dein-deutsch", testDeinDeutschRouter);
 app.use("/sendMessage", sendEmailContactForm);
 app.use("/sendRegistration", registrationRouter);
 app.use("/login", login);
@@ -108,12 +109,12 @@ app.use("/restfull", restfull);
 // Health Check
 // --------------------------------------------------
 
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    message: "Backend is running",
-  });
-});
+// app.get("/health", (req, res) => {
+//   res.status(200).json({
+//     status: "ok",
+//     message: "Backend is running",
+//   });
+// });
 
 // --------------------------------------------------
 // Start Server

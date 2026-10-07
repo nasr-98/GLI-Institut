@@ -42,7 +42,7 @@ export default function Header({ lang, setLang, mode, setMode }) {
     ["/about", t.nav.about],
     ["/courses", t.nav.courses],
     ["/prices", t.nav.prices],
-    ["/", t.nav.test],
+    ["/testDeinDeutsch", t.nav.test],
     ["/contact", t.nav.contact],
   ];
 
@@ -133,7 +133,9 @@ export default function Header({ lang, setLang, mode, setMode }) {
                 {t.nav.prices}
               </MenuItem>
             </Menu>
-            <Button>{t.nav.test}</Button>
+            <Button component={Link} to="/testDeinDeutsch">
+              {t.nav.test}
+            </Button>
             <Button component={Link} to="/contact">
               {t.nav.contact}
             </Button>

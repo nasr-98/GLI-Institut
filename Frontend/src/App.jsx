@@ -19,10 +19,10 @@ import Courses from "./pages/Courses";
 import Prices from "./pages/Prices";
 import Contact from "./pages/Contact";
 import Registration from "./pages/Registration";
-import GermanTest from "./pages/GermanTest";
 import LegalPage from "./pages/LegalPage";
 import About from "./pages/About";
 import Course from "./pages/Course";
+import TestDeinDeutsch from "./pages/TestDeinDeutsch";
 
 import Impressum from "./pages/legal/Impressum";
 import Datenschutz from "./pages/legal/Datenschutz";
@@ -122,11 +122,14 @@ function AppContent() {
 
             <Route path="/prices" element={<Prices lang={lang} />} />
 
-            <Route path="/test" element={<GermanTest lang={lang} />} />
-
             <Route path="/contact" element={<Contact lang={lang} />} />
 
             <Route path="/register" element={<Registration lang={lang} />} />
+
+            <Route
+              path="/testDeinDeutsch"
+              element={<TestDeinDeutsch lang={lang} />}
+            />
 
             {/* ========================= */}
             {/* Dashboard Login            */}
